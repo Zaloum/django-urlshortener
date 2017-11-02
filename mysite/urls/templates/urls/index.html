@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid bg-primary">
+  <div class="container marketing">
+    <h2 style="padding-top: 4rem;" class="text-white">Enter a link:</h2>
+    <form id="id-url-form" method="post">
+      {% csrf_token %}
+      <div class="input-group">
+        <input type="text" class="form-control form-control-lg" id="id-url-input">
+        <span class="input-group-btn">
+          <button class="btn btn-primary" type="submit">SHORTEN</button>
+        </span>
+      </div>
+    </form>
+    <div style="padding-bottom: 4rem;">
+    </div>
+  </div>
+</div>
+<div class="container" id="id-results">
+</div>
+{% endblock %}
+
+{% block js %}
+<script type="text/javascript">
+var submitting = false;
+var urls = {};
+
+$("#id-url-form").on("submit", function(event){
+    event.preventDefault();
+    if (!submitting) {
+	submitting = true;
+        var url = $("#id-url-input").val();
+
+        if (url in urls) {
+	    div = urls[url];	
+	    div.fadeIn(); {# show, if closed previously #}
+   	    $("#id-results").prepend(div) {# place it back at the top #}
+	    submitting = false;
+	} else {
+	    shortenUrl(url);
+	}
+    }
+});
+
+function shortenUrl(url) {
+    $.ajax({
+	url: "create/",
+	method: "post", 
+	data: { 
+	    csrfmiddlewaretoken: "{{ csrf_token }}", 
+	    url: url, 
+	}, 
+	success : function(json) {
+	    if (json["success"]) {
+		result = $("<a/>") 
+	        	.attr("href", json["result"])
+	        	.append(json["result"])
+	    } else {
+		result = $("<div/>").append(json["result"]);
+	    }
+
+	    div = $("<div/>")	
+		    .addClass("card")
+		    .append(
+		        $("<div/>")
+		        .addClass("card-block")
+			    .append(
+				$("<h5/>")
+				    .addClass("card-title")
+				    .append(
+					$("<button/>")
+					    .addClass("close clickable")
+					    .append(
+						$("<span/>")
+						    .attr("aria-hidden", "true")
+						    .append("&times;")
+					    )
+					    .click(function(event) { 
+	                		        event.preventDefault();
+						card = $(this).closest(".card");
+						card.fadeOut();
+					    })
+			            )
+				    .append(json["hostname"])
+			    )
+			    .append(
+			        $("<h6/>")
+			            .addClass("card-subtitle")
+			            .append(
+			                $("<a/>")
+				            .attr("href", json["url"])
+				            .append(json["url"])
+				    )
+			    )
+		    	    .append(
+			        $("<p/>")
+			            .addClass("card-text")
+			            .append(result)
+			    )
+		    )	
+    	    $("#id-results").prepend(div);
+	    urls[url] = div;
+	}, 
+	complete: function() { 
+	    submitting = false;
+	}
+    });
+};
+</script>
+{% endblock %}
